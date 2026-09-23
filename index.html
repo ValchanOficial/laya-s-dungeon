@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto-Battler Tático: Calabouço do Laya</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              darkBg: '#09090b',
+              cardBg: '#121216',
+              cardBorder: '#27272a',
+              fantasyGold: '#d4af37',
+              fantasyRed: '#dc2626',
+              fantasyPurple: '#9333ea',
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #09090b;
+        color: #f4f4f5;
+      }
+      .font-cinzel {
+        font-family: 'Cinzel', serif;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .glow-gold {
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+      }
+      .glow-purple {
+        box-shadow: 0 0 25px rgba(147, 51, 234, 0.2);
+      }
+      .glow-red {
+        box-shadow: 0 0 25px rgba(220, 38, 38, 0.2);
+      }
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          opacity: 0.8;
+        }
+        50% {
+          opacity: 1;
+          filter: drop-shadow(0 0 12px rgba(147, 51, 234, 0.6));
+        }
+      }
+      .ai-active {
+        animation: pulseGlow 2s infinite ease-in-out;
+      }
+      /* Custom scrollbar for terminal */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #18181b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-darkBg to-black text-zinc-100 flex flex-col items-center justify-between p-3 sm:p-6"
+  >
+    <header
+      class="w-full max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between border-b border-zinc-800 pb-4 mb-4 gap-4"
+    >
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-900 to-zinc-900 border border-purple-500/40 flex items-center justify-center text-fantasyGold text-2xl shadow-lg glow-purple"
+        >
+          <i class="fa-solid fa-chess-rook"></i>
+        </div>
+        <div>
+          <h1
+            class="font-cinzel text-xl sm:text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-fantasyGold to-amber-500"
+          >
+            CALABOUÇO DO LAYA
+          </h1>
+          <p class="text-xs text-zinc-400 font-mono">
+            Motor de Decisão Estruturada System-1 Active
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button
+          id="toggleAutoBtn"
+          onclick="toggleAutoBattle()"
+          class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 font-cinzel text-sm font-bold tracking-wide shadow-lg border border-purple-400/30 transition-all flex items-center space-x-2 cursor-pointer"
+        >
+          <i id="autoIcon" class="fa-solid fa-play"></i>
+          <span id="autoText">Iniciar Batalha</span>
+        </button>
+        <button
+          onclick="stepTurn()"
+          id="stepBtn"
+          class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm font-medium transition-all flex items-center space-x-2 cursor-pointer"
+        >
+          <i class="fa-solid fa-forward-step"></i>
+          <span>Turno Manual</span>
+        </button>
+        <button
+          onclick="resetGame()"
+          class="p-2.5 rounded-xl bg-zinc-900 hover:bg-red-950/50 border border-zinc-800 hover:border-red-800/50 text-zinc-400 hover:text-red-400 transition-all cursor-pointer"
+          title="Reiniciar Jogo"
+        >
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+    </header>
+
+    <main
+      class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow mb-6"
+    >
+      <!-- COLUMN 1: Hero Status Panel -->
+      <section
+        class="flex flex-col space-y-4 bg-cardBg/80 backdrop-blur border border-cardBorder rounded-2xl p-5 shadow-xl"
+      >
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-3"
+        >
+          <h2
+            class="font-cinzel font-bold text-amber-400 flex items-center space-x-2"
+          >
+            <i class="fa-solid fa-shield-halved text-fantasyGold"></i>
+            <span>Status do Herói</span>
+          </h2>
+          <span
+            id="floorBadge"
+            class="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold"
+          >
+            Andar 1
+          </span>
+        </div>
+
+        <!-- Hero avatar & basic info -->
+        <div class="flex items-center space-x-4 py-2">
+          <div
+            class="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-inner"
+          >
+            🛡️
+            <span
+              id="heroLevelBadge"
+              class="absolute -bottom-1 -right-1 min-w-5 h-5 px-1 bg-amber-600 rounded-full border-2 border-cardBg flex items-center justify-center text-[10px] font-bold text-white"
+              >1</span
+            >
+          </div>
+          <div>
+            <h3 class="font-bold text-zinc-100 font-cinzel">
+              Cavaleiro Autônomo
+            </h3>
+            <p class="text-xs text-zinc-400">Controlado por Laya AI Router</p>
+            <div class="text-xs text-amber-400/90 font-mono mt-1 font-semibold">
+              Nível <span id="heroLevelVal">1</span>
+              · Pontuação: <span id="scoreVal">0</span> pts
+            </div>
+            <div class="text-xs text-zinc-400 font-mono mt-0.5">
+              Dano <span id="heroSwingVal">12–20</span>
+              · Magia <span id="heroBoltVal">26–36</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bars: HP, Mana, Potions -->
+        <div class="space-y-4 pt-2">
+          <!-- HP Bar -->
+          <div>
+            <div class="flex justify-between text-xs mb-1 font-medium">
+              <span class="text-red-400 flex items-center space-x-1"
+                ><i class="fa-solid fa-heart mr-1"></i> HP do Herói</span
+              >
+              <span id="heroHpText" class="font-mono text-zinc-200"
+                >100 / 100</span
+              >
+            </div>
+            <div
+              class="w-full h-3 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800"
+            >
+              <div
+                id="heroHpBar"
+                class="h-full bg-gradient-to-r from-red-600 to-rose-500 rounded-full transition-all duration-500"
+                style="width: 100%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Mana Bar -->
+          <div>
+            <div class="flex justify-between text-xs mb-1 font-medium">
+              <span class="text-purple-400 flex items-center space-x-1"
+                ><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Mana
+                Arcana</span
+              >
+              <span id="heroManaText" class="font-mono text-zinc-200"
+                >50 / 50</span
+              >
+            </div>
+            <div
+              class="w-full h-3 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800"
+            >
+              <div
+                id="heroManaBar"
+                class="h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-500"
+                style="width: 100%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- XP Bar -->
+          <div>
+            <div class="flex justify-between text-xs mb-1 font-medium">
+              <span class="text-amber-400 flex items-center space-x-1"
+                ><i class="fa-solid fa-star mr-1"></i> Experiência</span
+              >
+              <span id="heroXpText" class="font-mono text-zinc-200"
+                >0 / 100</span
+              >
+            </div>
+            <div
+              class="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800"
+            >
+              <div
+                id="heroXpBar"
+                class="h-full bg-gradient-to-r from-amber-500 to-yellow-300 rounded-full transition-all duration-500"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Potion inventory -->
+          <div class="space-y-2">
+            <div
+              class="flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="w-9 h-9 rounded-lg bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center text-emerald-400"
+                >
+                  🧪
+                </div>
+                <div>
+                  <div class="text-xs text-zinc-400 font-medium">
+                    Poções de Cura
+                  </div>
+                  <div
+                    class="text-sm font-bold text-zinc-200 font-mono"
+                    id="potionsVal"
+                  >
+                    3 restantes
+                  </div>
+                </div>
+              </div>
+              <button
+                onclick="drinkPotionManual()"
+                class="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-medium transition cursor-pointer"
+              >
+                Usar Agora
+              </button>
+            </div>
+            <div
+              class="flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="w-9 h-9 rounded-lg bg-indigo-950/50 border border-indigo-500/30 flex items-center justify-center text-indigo-300"
+                >
+                  💧
+                </div>
+                <div>
+                  <div class="text-xs text-zinc-400 font-medium">
+                    Poções de Mana
+                  </div>
+                  <div
+                    class="text-sm font-bold text-zinc-200 font-mono"
+                    id="manaPotionsVal"
+                  >
+                    1 restante
+                  </div>
+                </div>
+              </div>
+              <button
+                onclick="drinkManaPotionManual()"
+                class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-medium transition cursor-pointer"
+              >
+                Usar Agora
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dungeon modifiers info -->
+        <div
+          class="mt-auto pt-4 border-t border-zinc-800/60 text-xs text-zinc-400 space-y-1"
+        >
+          <div class="flex justify-between">
+            <span>Inferência (último turno):</span>
+            <span id="inferenceSpeed" class="font-mono text-purple-300"
+              >-- ms (ModernBERT)</span
+            >
+          </div>
+          <div class="flex justify-between">
+            <span>Modo de Decisão:</span>
+            <span class="font-mono text-amber-300">Zero-Shot Structured</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 2: Central Combat Arena & Enemy Display -->
+      <section
+        class="flex flex-col space-y-4 bg-cardBg/80 backdrop-blur border border-cardBorder rounded-2xl p-5 shadow-xl"
+      >
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-3"
+        >
+          <h2
+            class="font-cinzel font-bold text-red-400 flex items-center space-x-2"
+          >
+            <i class="fa-solid fa-skull text-red-500"></i>
+            <span>Arena de Combate</span>
+          </h2>
+          <span
+            class="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-mono font-bold animate-pulse"
+          >
+            EMISSÃO ATIVA
+          </span>
+        </div>
+
+        <!-- Enemy Card Arena -->
+        <div
+          id="enemyCardContainer"
+          class="relative flex-grow flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900/90 to-black/90 border border-zinc-800 rounded-2xl p-6 shadow-inner text-center overflow-hidden"
+        >
+          <!-- Decorative background glow -->
+          <div
+            class="absolute -top-12 -right-12 w-32 h-32 bg-red-600/10 rounded-full blur-2xl"
+          ></div>
+          <div
+            class="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl"
+          ></div>
+
+          <!-- Enemy Emoji/Avatar -->
+          <div
+            id="enemyAvatar"
+            class="w-24 h-24 rounded-3xl bg-gradient-to-br from-zinc-800 to-zinc-950 border border-red-500/30 flex items-center justify-center text-5xl shadow-2xl mb-4 transform hover:scale-105 transition duration-300"
+          >
+            👹
+          </div>
+
+          <!-- Enemy Name & Details -->
+          <h3
+            id="enemyName"
+            class="font-cinzel text-lg font-bold text-zinc-100 tracking-wider"
+          >
+            Goblin Ladrão
+          </h3>
+
+          <!-- Enemy HP Bar -->
+          <div class="w-full max-w-xs mt-3">
+            <div class="flex justify-between text-xs mb-1 font-medium">
+              <span class="text-zinc-400">HP Inimigo</span>
+              <span id="enemyHpText" class="font-mono text-red-400 font-bold"
+                >40 / 40</span
+              >
+            </div>
+            <div
+              class="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800"
+            >
+              <div
+                id="enemyHpBar"
+                class="h-full bg-gradient-to-r from-red-600 to-amber-600 rounded-full transition-all duration-500"
+                style="width: 100%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Enemy Intent Box -->
+          <div
+            class="mt-5 w-full bg-zinc-900/80 border border-zinc-800 rounded-xl p-3.5 text-left"
+          >
+            <div
+              class="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-1 flex items-center"
+            >
+              <i
+                class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"
+              ></i>
+              Intenção Detectada:
+            </div>
+            <div
+              id="enemyIntent"
+              class="text-xs sm:text-sm font-medium text-amber-200/90 italic"
+            >
+              "Preparando um ataque furtivo rápido nas sombras..."
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: Laya AI Real-Time Decision Panel -->
+      <section
+        class="flex flex-col space-y-4 bg-cardBg/80 backdrop-blur border border-cardBorder rounded-2xl p-5 shadow-xl"
+      >
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-3"
+        >
+          <h2
+            class="font-cinzel font-bold text-purple-400 flex items-center space-x-2"
+          >
+            <i class="fa-solid fa-brain text-purple-400 ai-active"></i>
+            <span>Cérebro IA (Laya)</span>
+          </h2>
+          <span
+            id="layaStatus"
+            class="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-mono font-bold"
+          >
+            System-1 Ready
+          </span>
+        </div>
+
+        <!-- AI Telemetry metrics -->
+        <div class="space-y-4 flex-grow flex flex-col justify-around">
+          <!-- Chosen Action Display -->
+          <div
+            class="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 relative overflow-hidden"
+          >
+            <div class="text-xs text-zinc-400 font-medium mb-1">
+              Ação Escolhida (Choice Engine)
+            </div>
+            <div class="flex items-center justify-between">
+              <div
+                id="aiChosenAction"
+                class="font-cinzel font-bold text-lg text-purple-300 tracking-wide uppercase"
+              >
+                ATACAR_FISICO
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-zinc-400 block font-mono"
+                  >Confiança</span
+                >
+                <span
+                  id="aiConfidence"
+                  class="font-mono text-sm font-bold text-emerald-400"
+                  >--%</span
+                >
+              </div>
+            </div>
+            <div
+              class="mt-2 w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden"
+            >
+              <div
+                id="aiConfBar"
+                class="h-full bg-emerald-500 transition-all duration-300"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div
+              id="aiProbBreakdown"
+              class="mt-2 font-mono text-[10px] text-zinc-500 leading-relaxed"
+            >
+              aguardando o primeiro turno
+            </div>
+          </div>
+
+          <!-- Death Risk Bar -->
+          <div class="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs text-zinc-400 font-medium"
+                >Perigo Mortal (sinal danger)</span
+              >
+              <span
+                id="aiRiskVal"
+                class="font-mono text-xs font-bold text-amber-400"
+                >12% (Baixo)</span
+              >
+            </div>
+            <div
+              class="w-full h-3 bg-zinc-950 rounded-full overflow-hidden p-0.5 border border-zinc-800"
+            >
+              <div
+                id="aiRiskBar"
+                class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-600 transition-all duration-500"
+                style="width: 12%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Aggressiveness Score -->
+          <div class="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-xs text-zinc-400 font-medium"
+                >Nível de Agressividade (Score 0-2)</span
+              >
+              <span
+                id="aiAggressionVal"
+                class="font-mono text-sm font-bold text-purple-300"
+                >-- / 2</span
+              >
+            </div>
+            <div class="flex space-x-2 mt-2">
+              <div
+                id="agg-1"
+                class="flex-1 h-2 rounded-full bg-purple-600 transition-all"
+              ></div>
+              <div
+                id="agg-2"
+                class="flex-1 h-2 rounded-full bg-purple-600 transition-all"
+              ></div>
+              <div
+                id="agg-3"
+                class="flex-1 h-2 rounded-full bg-zinc-800 transition-all"
+              ></div>
+            </div>
+            <div
+              id="aiLatency"
+              class="mt-3 pt-2 border-t border-zinc-800 font-mono text-[10px] text-zinc-500"
+            >
+              -- ms · -- tokens
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer
+      class="w-full max-w-6xl mx-auto bg-cardBg/90 backdrop-blur border border-cardBorder rounded-2xl p-4 shadow-xl"
+    >
+      <div
+        class="flex items-center justify-between mb-2 pb-2 border-b border-zinc-800"
+      >
+        <span class="text-xs font-mono text-zinc-400 flex items-center">
+          <i class="fa-solid fa-terminal mr-2 text-purple-400"></i> Terminal de
+          Batalha & Eventos
+        </span>
+        <span class="text-[10px] font-mono text-zinc-500" id="logTimestamp"
+          >--:--:--</span
+        >
+      </div>
+      <div
+        id="terminalLog"
+        class="h-32 overflow-y-auto font-mono text-xs space-y-1.5 p-2 bg-zinc-950/80 rounded-xl border border-zinc-900"
+      >
+        <div class="text-zinc-500">
+          [Sistema] Calabouço inicializado. Aguardando comandos para iniciar a
+          batalha automática...
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { applyLoot, rollLoot } from '/src/loot.mjs';
+      import {
+        PHYSICAL_DAMAGE,
+        SPELL_DAMAGE,
+        applyXp,
+        damageRange,
+        rollDamage,
+        xpFromKill,
+        xpToNext,
+      } from '/src/level.mjs';
+      window.LayaLoot = { applyLoot, rollLoot };
+      window.LayaLevel = {
+        PHYSICAL_DAMAGE,
+        SPELL_DAMAGE,
+        applyXp,
+        damageRange,
+        rollDamage,
+        xpFromKill,
+        xpToNext,
+      };
+    </script>
+    <script>
+      const POTION_HEAL = 40;
+      const POTION_MANA = 25;
+      const SPELL_COST = 15;
+
+      function heroDamage() {
+        const api = window.LayaLevel;
+        if (api?.damageRange && api.PHYSICAL_DAMAGE && api.SPELL_DAMAGE) {
+          return {
+            swing: api.damageRange(api.PHYSICAL_DAMAGE, game.level),
+            bolt: api.damageRange(api.SPELL_DAMAGE, game.level),
+          };
+        }
+        const bonus = 2 * (Math.max(1, Number(game.level) || 1) - 1);
+        return {
+          swing: { min: 12 + bonus, max: 20 + bonus },
+          bolt: { min: 26 + bonus, max: 36 + bonus },
+        };
+      }
+
+      function rollHeroDamage(kind) {
+        const api = window.LayaLevel;
+        const base = kind === 'spell' ? api?.SPELL_DAMAGE : api?.PHYSICAL_DAMAGE;
+        if (api?.rollDamage && base) return api.rollDamage(base, game.level);
+        const range = kind === 'spell' ? heroDamage().bolt : heroDamage().swing;
+        return range.min + Math.floor(Math.random() * (range.max - range.min + 1));
+      }
+
+      // Game State Object
+      const game = {
+        heroMaxHp: 100,
+        heroHp: 100,
+        heroMana: 50,
+        heroMaxMana: 50,
+        potions: 3,
+        manaPotions: 1,
+        level: 1,
+        xp: 0,
+        floor: 1,
+        score: 0,
+        gameOver: false,
+        isAutoRunning: false,
+        autoInterval: null,
+        enemy: null,
+        defending: false,
+        thinking: false,
+      };
+
+      const enemiesList = [
+        {
+          name: 'Goblin Ladrão',
+          hp: 40,
+          maxHp: 40,
+          attack: 12,
+          intent: 'Preparando um ataque furtivo rápido nas sombras',
+          intentEn: 'creeping through the shadows for a quick backstab',
+          emoji: '👺',
+          loot: { heal: 0.55, mana: 0.25 },
+        },
+        {
+          name: 'Esqueleto Guerreiro',
+          hp: 60,
+          maxHp: 60,
+          attack: 18,
+          intent: 'Erguendo o escudo pesado e preparando golpe contundente',
+          intentEn: 'raising a heavy shield and winding up a blunt strike',
+          emoji: '💀',
+          loot: { heal: 0.3, mana: 0.25 },
+        },
+        {
+          name: 'Mago Sombrio',
+          hp: 35,
+          maxHp: 35,
+          attack: 22,
+          intent: 'Canalizando uma bola de fogo arcana instável',
+          intentEn: 'channelling an unstable arcane fireball',
+          emoji: '🧙‍♂️',
+          loot: { heal: 0.25, mana: 0.55 },
+        },
+        {
+          name: 'Orc Berserker',
+          hp: 75,
+          maxHp: 75,
+          attack: 25,
+          intent: 'Rugindo com fúria cega, preparando machadada brutal',
+          intentEn: 'roaring with blind rage, winding up a brutal axe swing',
+          emoji: '🧌',
+          loot: { heal: 0.5, mana: 0.3 },
+        },
+      ];
+
+      function spawnNewEnemy() {
+        const template =
+          enemiesList[Math.floor(Math.random() * enemiesList.length)];
+        game.enemy = { ...template, hp: template.maxHp };
+      }
+
+      // Initialize first enemy on load
+      spawnNewEnemy();
+      updateUI();
+      checkLayaHealth();
+
+      // Laya Decision Engine: o turno e decidido pelo checkpoint rodando no
+      // servidor (POST /api/decide), nao por regras aqui no cliente.
+      function setLayaStatus(text, tone = 'ready') {
+        const badge = document.getElementById('layaStatus');
+        const tones = {
+          ready: 'bg-purple-500/10 border-purple-500/30 text-purple-300',
+          thinking: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+          error: 'bg-red-500/10 border-red-500/30 text-red-300',
+        };
+        badge.className = `px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold ${tones[tone]}`;
+        badge.innerText = text;
+      }
+
+      async function askLaya(state) {
+        const response = await fetch('/api/decide', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            heroHp: state.heroHp,
+            heroMaxHp: state.heroMaxHp,
+            heroMana: state.heroMana,
+            heroMaxMana: state.heroMaxMana,
+            potions: state.potions,
+            manaPotions: state.manaPotions,
+            floor: state.floor,
+            level: state.level,
+            enemy: {
+              name: state.enemy.name,
+              hp: state.enemy.hp,
+              maxHp: state.enemy.maxHp,
+              attack: state.enemy.attack,
+              // O encoder e monolingue: a tela mostra a intencao em portugues,
+              // o modelo recebe a versao em ingles.
+              intent: state.enemy.intentEn ?? state.enemy.intent,
+            },
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error ?? response.statusText);
+        return body;
+      }
+
+      async function checkLayaHealth() {
+        try {
+          const response = await fetch('/api/health');
+          const { model, device } = await response.json();
+          setLayaStatus(`${model} · ${device}`);
+          logMessage(
+            `Checkpoint ${model} carregado no servidor (${device}).`,
+            'ai',
+          );
+        } catch {
+          setLayaStatus('servidor offline', 'error');
+          logMessage(
+            '⚠️ Servidor do Laya nao respondeu. Rode <span class="text-zinc-200">npm start</span> e abra pela porta 8787.',
+            'damage',
+          );
+        }
+      }
+
+      function logMessage(msg, type = 'normal') {
+        const terminal = document.getElementById('terminalLog');
+        const timeStr = new Date().toLocaleTimeString();
+        document.getElementById('logTimestamp').innerText = timeStr;
+
+        let colorClass = 'text-zinc-300';
+        if (type === 'damage') colorClass = 'text-red-400 font-semibold';
+        if (type === 'heal') colorClass = 'text-emerald-400 font-semibold';
+        if (type === 'mana') colorClass = 'text-indigo-300 font-semibold';
+        if (type === 'loot') colorClass = 'text-amber-200 font-semibold';
+        if (type === 'victory') colorClass = 'text-amber-300 font-bold';
+        if (type === 'level') colorClass = 'text-amber-200 font-bold';
+        if (type === 'ai') colorClass = 'text-purple-300 font-mono';
+
+        const div = document.createElement('div');
+        div.className = colorClass;
+        div.innerHTML = `<span class="text-zinc-600">[${timeStr}]</span> ${msg}`;
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      function updateUI() {
+        // Hero
+        document.getElementById('heroHpText').innerText =
+          `${game.heroHp} / ${game.heroMaxHp}`;
+        document.getElementById('heroHpBar').style.width =
+          `${(game.heroHp / game.heroMaxHp) * 100}%`;
+        document.getElementById('heroManaText').innerText =
+          `${game.heroMana} / ${game.heroMaxMana}`;
+        document.getElementById('heroManaBar').style.width =
+          `${(game.heroMana / game.heroMaxMana) * 100}%`;
+        document.getElementById('potionsVal').innerText =
+          `${game.potions} restante${game.potions === 1 ? '' : 's'}`;
+        document.getElementById('manaPotionsVal').innerText =
+          `${game.manaPotions} restante${game.manaPotions === 1 ? '' : 's'}`;
+        document.getElementById('scoreVal').innerText = game.score;
+        document.getElementById('heroLevelVal').innerText = game.level;
+        document.getElementById('heroLevelBadge').innerText = game.level;
+        const dmg = heroDamage();
+        document.getElementById('heroSwingVal').innerText =
+          `${dmg.swing.min}–${dmg.swing.max}`;
+        document.getElementById('heroBoltVal').innerText =
+          `${dmg.bolt.min}–${dmg.bolt.max}`;
+        const xpNeeded = (window.LayaLevel?.xpToNext ?? ((n) => 100 * n))(game.level);
+        document.getElementById('heroXpText').innerText =
+          `${game.xp} / ${xpNeeded}`;
+        document.getElementById('heroXpBar').style.width =
+          `${Math.min(100, (game.xp / xpNeeded) * 100)}%`;
+        document.getElementById('floorBadge').innerText = `Andar ${game.floor}`;
+
+        // Enemy
+        if (game.enemy) {
+          document.getElementById('enemyName').innerText = game.enemy.name;
+          document.getElementById('enemyAvatar').innerText = game.enemy.emoji;
+          document.getElementById('enemyHpText').innerText =
+            `${game.enemy.hp} / ${game.enemy.maxHp}`;
+          document.getElementById('enemyHpBar').style.width =
+            `${Math.max(0, (game.enemy.hp / game.enemy.maxHp) * 100)}%`;
+          document.getElementById('enemyIntent').innerText =
+            `"${game.enemy.intent}"`;
+        }
+      }
+
+      // Rotulos so para exibicao: sinais e gatilhos ainda em evolucao no
+      // servidor caem no proprio nome quando nao estao mapeados aqui.
+      const DRIVERS = {
+        mortal_danger: 'perigo mortal',
+        finish_it: 'dá pra finalizar',
+        enemy_threat: 'golpe pesado a caminho',
+        spend_mana: 'hora de gastar mana',
+        restore_mana: 'reabastecer mana',
+        default: 'nenhum sinal disparou',
+      };
+
+      const SIGNALS = {
+        danger: 'perigo',
+        finish: 'finalizar',
+        threat: 'ameaça',
+        burst: 'magia',
+      };
+
+      function updateAIPanel(decision) {
+        document.getElementById('aiChosenAction').innerText =
+          decision.action.toUpperCase();
+
+        document.getElementById('aiConfidence').innerText =
+          `${(decision.confidence * 100).toFixed(0)}%`;
+        document.getElementById('aiConfBar').style.width =
+          `${decision.confidence * 100}%`;
+
+        const pct = (v) => `${(v * 100).toFixed(0)}%`;
+        const sinais = Object.entries(decision.signals)
+          .map(([name, s]) => `${SIGNALS[name] ?? name} ${pct(s.value)}`)
+          .join(' · ');
+        document.getElementById('aiProbBreakdown').innerText =
+          `gatilho: ${DRIVERS[decision.driver] ?? decision.driver} · ${sinais}` +
+          (decision.calibrated ? '' : ' · sinais não calibrados');
+
+        const riskPct = Math.round((decision.signals.danger?.value ?? 0) * 100);
+        let riskLabel = 'Baixo';
+        if (riskPct > 40) riskLabel = 'Moderado';
+        if (riskPct > 75) riskLabel = 'Crítico! ⚠️';
+        document.getElementById('aiRiskVal').innerText =
+          `${riskPct}% (${riskLabel})`;
+        document.getElementById('aiRiskBar').style.width = `${riskPct}%`;
+
+        // Aggression pills: o score vem em 0..aggressionMax (hoje 0..2).
+        const max = decision.aggressionMax ?? 2;
+        document.getElementById('aiAggressionVal').innerText =
+          `${decision.aggression.toFixed(2)} / ${max}`;
+        const filled = Math.round(decision.aggression) + 1;
+        for (let i = 1; i <= 3; i++) {
+          const pill = document.getElementById(`agg-${i}`);
+          pill.className =
+            i <= filled
+              ? 'flex-1 h-2 rounded-full bg-purple-600 transition-all'
+              : 'flex-1 h-2 rounded-full bg-zinc-800 transition-all';
+        }
+
+        document.getElementById('aiLatency').innerText =
+          `${decision.latencyMs} ms · ${decision.tokens} tokens`;
+        document.getElementById('inferenceSpeed').innerText =
+          `${decision.latencyMs} ms (ModernBERT)`;
+      }
+
+      async function stepTurn() {
+        if (game.gameOver) {
+          logMessage(
+            'O jogo terminou. Reinicie para jogar novamente.',
+            'damage',
+          );
+          stopAutoBattle();
+          return;
+        }
+        // A inferencia leva mais de um segundo; sem isso o auto-battle
+        // empilharia turnos em cima de um estado ja desatualizado.
+        if (game.thinking) return;
+
+        // 1. Decisao do modelo, no servidor
+        let aiDecision;
+        game.thinking = true;
+        setLayaStatus('pensando…', 'thinking');
+        try {
+          aiDecision = await askLaya(game);
+        } catch (err) {
+          setLayaStatus('falha na decisão', 'error');
+          logMessage(`⚠️ Laya não respondeu: ${err.message}`, 'damage');
+          stopAutoBattle();
+          return;
+        } finally {
+          game.thinking = false;
+        }
+        if (game.gameOver) return;
+
+        setLayaStatus(`${aiDecision.model} · ${aiDecision.device}`);
+        updateAIPanel(aiDecision);
+        logMessage(
+          `Laya avaliou o estado: Escolha [${aiDecision.action.toUpperCase()}] | Perigo: ${((aiDecision.signals.danger?.value ?? 0) * 100).toFixed(0)}% | ${aiDecision.latencyMs} ms`,
+          'ai',
+        );
+
+        // 2. Hero Action Execution
+        const action = aiDecision.action;
+        game.defending = false;
+        if (action === 'atacar_fisico') {
+          const damage = rollHeroDamage('swing');
+          game.enemy.hp -= damage;
+          logMessage(
+            `⚔️ Herói desferiu um Ataque Físico causando <span class="text-red-400">-${damage}</span> de dano no ${game.enemy.name}!`,
+            'damage',
+          );
+        } else if (action === 'usar_magia' && game.heroMana >= SPELL_COST) {
+          game.heroMana -= SPELL_COST;
+          const damage = rollHeroDamage('spell');
+          game.enemy.hp -= damage;
+          logMessage(
+            `🔮 Herói canalizou Magia Arcana causando <span class="text-purple-400">-${damage}</span> de dano crítico!`,
+            'damage',
+          );
+        } else if (action === 'curar' && game.potions > 0) {
+          game.potions--;
+          game.heroHp = Math.min(game.heroMaxHp, game.heroHp + POTION_HEAL);
+          logMessage(
+            `🧪 Herói bebeu uma Poção de Cura recuperando <span class="text-emerald-400">+${POTION_HEAL} HP</span>!`,
+            'heal',
+          );
+        } else if (action === 'usar_pocao_mana' && game.manaPotions > 0) {
+          game.manaPotions--;
+          game.heroMana = Math.min(game.heroMaxMana, game.heroMana + POTION_MANA);
+          logMessage(
+            `💧 Herói bebeu uma Poção de Mana recuperando <span class="text-indigo-300">+${POTION_MANA} de mana</span>!`,
+            'mana',
+          );
+        } else {
+          // Defesa: o proximo golpe inimigo vem pela metade e o heroi recupera
+          // mana. Mesmos numeros descritos ao modelo em src/decision.mjs.
+          game.defending = true;
+          game.heroMana = Math.min(game.heroMaxMana, game.heroMana + 10);
+          logMessage(
+            `🛡️ Herói assumiu Postura Defensiva: próximo golpe pela metade e <span class="text-purple-400">+10 de mana</span>.`,
+            'normal',
+          );
+        }
+
+        updateUI();
+
+        // 3. Check Enemy Defeat
+        if (game.enemy.hp <= 0) {
+          logMessage(
+            `✨ O inimigo ${game.enemy.name} foi derrotado com sucesso!`,
+            'victory',
+          );
+          await collectLoot();
+          grantKillXp();
+          game.floor++;
+          game.score += 150;
+          game.heroMana = Math.min(game.heroMaxMana, game.heroMana + 25); // Mana regen
+          spawnNewEnemy();
+          updateUI();
+          logMessage(
+            `🚪 Herói avançou para o Andar ${game.floor}. Novo monstro avistado: ${game.enemy.name}!`,
+            'victory',
+          );
+          return;
+        }
+
+        // 4. Enemy Retaliation Turn
+        let enemyDmg = game.enemy.attack;
+        if (game.defending) {
+          enemyDmg = Math.floor(enemyDmg / 2);
+          logMessage(`🛡️ O escudo absorveu metade do golpe.`, 'ai');
+        }
+
+        game.heroHp -= enemyDmg;
+        logMessage(
+          `💥 ${game.enemy.name} contra-atacou causando <span class="text-red-500">-${enemyDmg} HP</span> ao herói.`,
+          'damage',
+        );
+
+        if (game.heroHp <= 0) {
+          game.heroHp = 0;
+          game.gameOver = true;
+          logMessage(
+            `💀 O herói tombou no Calabouço (Andar ${game.floor}). Fim de jogo.`,
+            'damage',
+          );
+          stopAutoBattle();
+        }
+
+        updateUI();
+      }
+
+      function grantKillXp() {
+        const levelApi = window.LayaLevel;
+        if (!levelApi) return;
+        const gained = levelApi.xpFromKill({
+          floor: game.floor,
+          enemy: game.enemy,
+        });
+        const next = levelApi.applyXp(game, gained);
+        game.level = next.level;
+        game.xp = next.xp;
+        logMessage(
+          `✨ +${gained} XP (${next.xp} / ${next.xpNeeded} para o próximo nível).`,
+          'level',
+        );
+        if (next.levelsGained > 0) {
+          game.heroHp = next.heroHp;
+          game.heroMana = next.heroMana;
+          const dmg = heroDamage();
+          logMessage(
+            `⭐ O cavaleiro subiu para o nível ${game.level}! HP e mana restaurados. Ataque ${dmg.swing.min}–${dmg.swing.max}, magia ${dmg.bolt.min}–${dmg.bolt.max}.`,
+            'level',
+          );
+        }
+      }
+
+      async function collectLoot() {
+        const loot = window.LayaLoot ?? (await import('/src/loot.mjs'));
+        const drops = loot.rollLoot({ floor: game.floor, enemy: game.enemy });
+        const next = loot.applyLoot(
+          { potions: game.potions, manaPotions: game.manaPotions },
+          drops,
+        );
+        game.potions = next.potions;
+        game.manaPotions = next.manaPotions;
+        if (drops.length === 0) {
+          logMessage(
+            `O ${game.enemy.name} não deixou nenhum item.`,
+            'normal',
+          );
+          return;
+        }
+        const names = drops.map((d) => d.label).join(' e ');
+        logMessage(
+          `📦 O ${game.enemy.name} deixou cair ${names}!`,
+          'loot',
+        );
+      }
+
+      function drinkPotionManual() {
+        if (game.potions > 0 && game.heroHp < game.heroMaxHp) {
+          game.potions--;
+          game.heroHp = Math.min(game.heroMaxHp, game.heroHp + POTION_HEAL);
+          logMessage(
+            `🧪 [Manual] Poção de Cura consumida! +${POTION_HEAL} HP recuperados.`,
+            'heal',
+          );
+          updateUI();
+        } else {
+          logMessage(
+            `⚠️ Não é possível usar poção de cura no momento (HP cheio ou sem poções).`,
+            'normal',
+          );
+        }
+      }
+
+      function drinkManaPotionManual() {
+        if (game.manaPotions > 0 && game.heroMana < game.heroMaxMana) {
+          game.manaPotions--;
+          game.heroMana = Math.min(game.heroMaxMana, game.heroMana + POTION_MANA);
+          logMessage(
+            `💧 [Manual] Poção de Mana consumida! +${POTION_MANA} de mana.`,
+            'mana',
+          );
+          updateUI();
+        } else {
+          logMessage(
+            `⚠️ Não é possível usar poção de mana no momento (mana cheia ou sem poções).`,
+            'normal',
+          );
+        }
+      }
+
+      function toggleAutoBattle() {
+        if (game.gameOver) {
+          resetGame();
+        }
+        game.isAutoRunning = !game.isAutoRunning;
+        const btnText = document.getElementById('autoText');
+        const autoIcon = document.getElementById('autoIcon');
+
+        if (game.isAutoRunning) {
+          btnText.innerText = 'Pausar Batalha';
+          autoIcon.className = 'fa-solid fa-pause';
+          logMessage(`🤖 Batalha Automática iniciada com motor Laya IA.`, 'ai');
+          // Turnos encadeados em vez de setInterval: cada inferencia leva mais
+          // de um segundo e o proximo turno so faz sentido depois dela.
+          const loop = async () => {
+            if (!game.isAutoRunning) return;
+            if (game.gameOver) return stopAutoBattle();
+            await stepTurn();
+            if (!game.isAutoRunning) return;
+            game.autoInterval = setTimeout(loop, 600);
+          };
+          loop();
+        } else {
+          stopAutoBattle();
+        }
+      }
+
+      function stopAutoBattle() {
+        game.isAutoRunning = false;
+        if (game.autoInterval) clearTimeout(game.autoInterval);
+        document.getElementById('autoText').innerText = 'Iniciar Batalha';
+        document.getElementById('autoIcon').className = 'fa-solid fa-play';
+        logMessage(`⏸️ Batalha Automática pausada.`, 'normal');
+      }
+
+      function resetGame() {
+        stopAutoBattle();
+        game.heroMaxHp = 100;
+        game.heroHp = 100;
+        game.heroMana = 50;
+        game.heroMaxMana = 50;
+        game.potions = 3;
+        game.manaPotions = 1;
+        game.level = 1;
+        game.xp = 0;
+        game.floor = 1;
+        game.score = 0;
+        game.gameOver = false;
+        game.defending = false;
+        spawnNewEnemy();
+        document.getElementById('terminalLog').innerHTML =
+          `<div class="text-zinc-500">[Sistema] Jogo reiniciado. Pronto para nova incursão ao calabouço.</div>`;
+        updateUI();
+        logMessage(
+          `🔄 Nova aventura iniciada. O cavaleiro entra no calabouço.`,
+          'victory',
+        );
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "laya-dungeon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Auto-battler tatico cujas decisoes do heroi sao tomadas pelo modelo Laya rodando local em ONNX Runtime",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --input-type=module -e \"import { spawn } from 'node:child_process'; import path from 'node:path'; const root = process.env.npm_config_local_prefix || process.env.INIT_CWD; spawn(process.execPath, [path.join(root, 'scripts', 'test.mjs')], { stdio: 'inherit' }).on('exit', (c, s) => process.exit(s ? 1 : (c ?? 1)));\"",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.20.0"
+  }
+}

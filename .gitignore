@@ -1,0 +1,14 @@
+node_modules/
+
+# Pesos dos checkpoints ONNX, exportados localmente (centenas de MB)
+model/
+model-en/
+
+# Amostras brutas do refit de temperatura
+calibration-samples.json
+
+.venv/
+__pycache__/
+
+npm-debug.log*
+.DS_Store
