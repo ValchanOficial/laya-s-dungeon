@@ -12,6 +12,9 @@ com as regras do jogo (mana, poções, dano) e escolhe a jogada.
 A tela em `index.html` chama `POST /api/decide` em todo turno — automático ou
 manual.
 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/699cea97-95a4-4f40-b728-bd8607c4a21a" />
+
+
 ## Como funciona
 
 ```
